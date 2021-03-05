@@ -1,16 +1,17 @@
 function omf.theme.set -a target_theme
-  if not test -d $OMF_PATH/themes/$target_theme -o -d $OMF_CONFIG/themes/$target_theme
+  if test -d $OMF_CONFIG/theme/$target_theme
+    set theme_path $OMF_CONFIG/theme/$target_theme
+  else if test -d $OMF_PATH/themes/$target_theme
+    set theme_path $OMF_PATH/themes/$target_theme
+  else
     return $OMF_INVALID_ARG
   end
 
-  if test -f $OMF_CONFIG/theme
-    read current_theme < $OMF_CONFIG/theme
-    test "$target_theme" = "$current_theme"; and return 0
-  end
+  set -l current_theme (omf.theme.current)
+  test "$target_theme" = "$current_theme"; and return 0
 
   set -l prompt_filename "fish_prompt.fish"
   set -l user_functions_path (omf.xdg.config_home)/fish/functions
-
   mkdir -p "$user_functions_path"
 
   if not omf.check.fish_prompt
@@ -19,14 +20,15 @@ function omf.theme.set -a target_theme
     return $OMF_INVALID_ARG
   end
 
+  omf.theme.unset
+  
+  set -l theme_paths {$OMF_CONFIG,$OMF_PATH}/themes/$target_theme
+
   # Replace autoload paths of current theme with the target one
-  set -q current_theme
-    and autoload -e {$OMF_CONFIG,$OMF_PATH}/themes/$current_theme{,/functions}
-  set -l theme_path {$OMF_CONFIG,$OMF_PATH}/themes*/$target_theme{,/functions}
-  autoload $theme_path
+  autoload $theme_paths{,/functions}
 
   # Find target theme's fish_prompt and link to user function path
-  for path in {$OMF_CONFIG,$OMF_PATH}/themes/$target_theme/$prompt_filename
+  for path in $theme_paths/$prompt_filename
     if test -e $path
       ln -sf $path $user_functions_path/$prompt_filename; and break
     end
@@ -38,7 +40,7 @@ function omf.theme.set -a target_theme
     and __fish_reload_key_bindings
 
   # Load target theme's conf.d files
-  for conf in {$OMF_CONFIG,$OMF_PATH}/themes/$target_theme/conf.d/*.fish
+  for conf in $theme_paths/conf.d/*.fish
     source $conf
   end
 

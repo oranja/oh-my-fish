@@ -13,11 +13,11 @@ test -f $OMF_CONFIG/theme
   or set -l theme default
 # Prepare Oh My Fish paths
 set -l core_function_path $OMF_PATH/lib{,/git}
-set -l theme_function_path {$OMF_CONFIG,$OMF_PATH}/themes*/$theme{,/functions}
+set -l theme_base_path {$OMF_CONFIG,$OMF_PATH}/themes*/$theme
 # Autoload core library
 set fish_function_path $fish_function_path[1] \
                        $core_function_path \
-                       $theme_function_path \
+                       $theme_base_path{,/functions} \
                        $fish_function_path[2..-1]
 # Require all packages
 emit perf:timer:start "Oh My Fish init installed packages"
@@ -29,9 +29,7 @@ functions -q fish_user_key_bindings
   and functions -c fish_user_key_bindings __original_fish_user_key_bindings
 # Override key bindings, calling original if existent
 function fish_user_key_bindings
-  test -f $OMF_CONFIG/theme
-    and read -l theme < $OMF_CONFIG/theme
-    or set -l theme default
+  set -l theme (omf.theme.current)
   test -e $OMF_CONFIG/key_bindings.fish;
     and source $OMF_CONFIG/key_bindings.fish
   # Prepare packages key bindings paths
@@ -49,8 +47,7 @@ emit perf:timer:start "Oh My Fish init user config path"
 require --no-bundle --path $OMF_CONFIG
 emit perf:timer:finish "Oh My Fish init user config path"
 # Load conf.d for current theme if exists
-set -l theme_conf_path {$OMF_CONFIG,$OMF_PATH}/themes*/$theme/conf.d
-for conf in $theme_conf_path/*.fish
+for conf in $theme_base_path/*.fish
   source $conf
 end
 emit perf:timer:finish "Oh My Fish initialisation"
